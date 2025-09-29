@@ -67,6 +67,12 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     httpsOnly: true
     siteConfig: {
       minTlsVersion: '1.2'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage__accountName'
+          value: storage.name
+        }
+      ]
     }
     functionAppConfig: {
       deployment: {
