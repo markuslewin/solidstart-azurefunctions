@@ -86,7 +86,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       }
       runtime: {
         name: 'node'
-        version: '22'
+        version: '20'
       }
       scaleAndConcurrency: {
         maximumInstanceCount: 40
@@ -130,3 +130,5 @@ resource workflowWebsiteContributorAssignment 'Microsoft.Authorization/roleAssig
     principalType: 'ServicePrincipal'
   }
 }
+
+output functionAppName string = functionApp.name
