@@ -51,16 +51,19 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Provision resources
-        uses: azure/arm-deploy@v2
+        uses: azure/bicep-deploy@v2
         id: provision
         with:
-          subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          resourceGroupName: ${{ secrets.AZURE_RESOURCE_GROUP_NAME }}
-          scope: resourcegroup
-          template: ./infra/main.bicep
+          type: deployment
+          operation: create
+          scope: resourceGroup
+          name: Provision
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP_NAME }}
+          template-file: ./infra/main.bicep
 
       - name: Deploy app
-        uses: Azure/functions-action@v1
+        uses: azure/functions-action@v1
         with:
           app-name: ${{ steps.provision.outputs.functionAppName }}
           package: .output/deploy.zip
