@@ -8,7 +8,6 @@ param appName string = 'func-${resourceToken}'
 var deploymentStorageContainerName = 'app-package-${take(appName, 32)}-${take(resourceToken, 7)}'
 
 var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
-var websiteContributorRoleId = 'de139f84-1756-47ae-9be6-808fbbe84772'
 
 resource storage 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: 'st${resourceToken}'
@@ -102,31 +101,6 @@ resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
     principalId: functionApp.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-resource workflowIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' = {
-  name: 'wf-id-${resourceToken}'
-  location: location
-  resource federated 'federatedIdentityCredentials@2024-11-30' = {
-    name: 'wf-id-fed-${resourceToken}'
-    properties: {
-      issuer: 'https://token.actions.githubusercontent.com'
-      subject: 'repo:markuslewin/solidstart-azurefunctions:ref:refs/heads/main'
-      audiences: [
-        'api://AzureADTokenExchange'
-      ]
-    }
-  }
-}
-
-resource workflowWebsiteContributorAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(subscription().id, workflowIdentity.id, 'Website Contributor')
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', websiteContributorRoleId)
-    principalId: workflowIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
