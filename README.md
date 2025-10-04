@@ -31,38 +31,48 @@ By default, `npm run build` will generate a Node app that you can run with `npm 
 
 ## This project was created with the [Solid CLI](https://github.com/solidjs-community/solid-cli)
 
-## Set up resource group and workflow auth
+## Authenticating the workflow
 
-### Using a script
-
-Create a resource group and a federated identity for the workflow:
+The Bicep file `infra/workflow-setup.bicep` creates a federated identity for the workflow. The required secrets are output:
 
 ```bash
-export SUBSCRIPTION_ID="00000000-0000-0000-0000-000000000000"
 export RESOURCE_GROUP="solidstart-azurefunctions"
 export LOCATION="swedencentral"
-export GITHUB_ORGANIZATION="markuslewin"
-export GITHUB_REPOSITORY="solidstart-azurefunctions"
+export REPO="markuslewin/solidstart-azurefunctions"
+
+# Create resource group
 az group create --name $RESOURCE_GROUP --location $LOCATION
-export PRINCIPAL_ID="$(az identity create --name workflow --resource-group $RESOURCE_GROUP --output tsv --query principalId)"
-# The workflow needs a role that's authorized to assign roles to the function app
-# [Use with `--assignee-object-id` to avoid errors caused by propagation latency in Microsoft Graph.](https://learn.microsoft.com/en-us/cli/azure/role/assignment?view=azure-cli-latest#az-role-assignment-create-optional-parameters)
-az role assignment create --assignee-object-id $PRINCIPAL_ID --assignee-principal-type ServicePrincipal --role Owner --scope "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RESOURCE_GROUP"
-az identity federated-credential create --identity-name workflow --name workflow-fc --resource-group $RESOURCE_GROUP --audiences "api://AzureADTokenExchange" --issuer "https://token.actions.githubusercontent.com" --subject "repo:$GITHUB_ORGANIZATION/$GITHUB_REPOSITORY:ref:refs/heads/main"
+
+# Create federated identity for workflow
+az deployment group create --resource-group $RESOURCE_GROUP --template-file infra/workflow-setup.bicep --parameters repo=$REPO --query properties.outputs.secrets.value
 ```
 
-Add the following secrets to the GitHub repository:
+The output secrets can be manually copy-pasted into the GitHub UI, but it's also possible to automate this step by formatting the output with `jq` and setting the secrets with `gh` like so:
 
-- `AZURE_CLIENT_ID` (Client ID of the workflow identity)
-- `AZURE_RESOURCE_GROUP_NAME`
-- `AZURE_SUBSCRIPTION_ID`
-- `AZURE_TENANT_ID`
+```bash
+# Create temporary file for secrets
+export SECRETS_FILE=$(mktemp)
 
-### Using `azd`
+# Write dotenv-formatted Bicep outputs to secrets file
+jq -r '.[] | "\(.name)=\(.secret)"' > $SECRETS_FILE
 
-- `azd pipeline config`
+# Set repository secrets
+gh secret set --env-file $SECRETS_FILE
+```
 
-## Delete resources
+In one script:
+
+```bash
+export RESOURCE_GROUP="solidstart-azurefunctions"
+export LOCATION="swedencentral"
+export REPO="markuslewin/solidstart-azurefunctions"
+export SECRETS_FILE=$(mktemp)
+az group create --name $RESOURCE_GROUP --location $LOCATION
+az deployment group create --resource-group $RESOURCE_GROUP --template-file infra/workflow-setup.bicep --parameters repo=$REPO --query properties.outputs.secrets.value | jq -r '.[] | "\(.name)=\(.secret)"' > $SECRETS_FILE
+gh secret set --env-file $SECRETS_FILE
+```
+
+## Delete Azure resources
 
 ```bash
 az group delete --name $RESOURCE_GROUP
