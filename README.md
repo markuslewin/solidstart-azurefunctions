@@ -33,47 +33,4 @@ By default, `npm run build` will generate a Node app that you can run with `npm 
 
 ## Authenticating the workflow
 
-The Bicep file `infra/workflow-setup.bicep` creates a federated identity for the workflow. The required secrets are output:
-
-```bash
-export RESOURCE_GROUP="solidstart-azurefunctions"
-export LOCATION="swedencentral"
-export REPO="markuslewin/solidstart-azurefunctions"
-
-# Create resource group
-az group create --name $RESOURCE_GROUP --location $LOCATION
-
-# Create federated identity for workflow
-az deployment group create --resource-group $RESOURCE_GROUP --template-file infra/workflow-setup.bicep --parameters repo=$REPO --query properties.outputs.secrets.value
-```
-
-The output secrets can be manually copy-pasted into the GitHub UI, but it's also possible to automate this step by formatting the output with `jq` and setting the secrets with `gh` like so:
-
-```bash
-# Create temporary file for secrets
-export SECRETS_FILE=$(mktemp)
-
-# Write dotenv-formatted Bicep outputs to secrets file
-jq -r '.[] | "\(.name)=\(.secret)"' > $SECRETS_FILE
-
-# Set repository secrets
-gh secret set --env-file $SECRETS_FILE
-```
-
-In one script:
-
-```bash
-export RESOURCE_GROUP="solidstart-azurefunctions"
-export LOCATION="swedencentral"
-export REPO="markuslewin/solidstart-azurefunctions"
-export SECRETS_FILE=$(mktemp)
-az group create --name $RESOURCE_GROUP --location $LOCATION
-az deployment group create --resource-group $RESOURCE_GROUP --template-file infra/workflow-setup.bicep --parameters repo=$REPO --query properties.outputs.secrets.value | jq -r '.[] | "\(.name)=\(.secret)"' > $SECRETS_FILE
-gh secret set --env-file $SECRETS_FILE
-```
-
-## Delete Azure resources
-
-```bash
-az group delete --name $RESOURCE_GROUP
-```
+The Bicep file `infra/workflow-setup.bicep` creates a federated identity for the workflow. Secrets required by the workflow is `output`. The output secrets can be manually copy-pasted into the GitHub UI, but it's also possible to automate this step by formatting the output with `jq`, and setting the secrets with `gh`. See `set-up-workflow-auth.sh` for an example of what this could look like.
